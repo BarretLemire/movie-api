@@ -2,6 +2,7 @@ import uuid
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from schemas import (
     Movie,
@@ -32,16 +33,34 @@ app.add_middleware(
 
 @app.get("/movies")
 async def get_movies() -> list[Movie]:
-    raise NotImplementedError
+    return movies
 
 @app.post("/movies")
 async def create_movie(new_movie: CreateMovieRequest) -> CreateMovieResponse:
-    raise NotImplementedError
+    new_movie_id = uuid.uuid4()
+
+    new_movie_obj = Movie(movie_id=new_movie_id, name=new_movie.name, year=new_movie.year)
+
+    movies.append(new_movie_obj)
+
+    response_body = {"id": str(new_movie_id)}
+    return JSONResponse(content=response_body)
 
 @app.put("/movies/{movie_id}")
 async def update_movie(movie_id: uuid.UUID, updated_movie: UpdateMovieRequest) -> UpdateMovieResponse:
-    raise NotImplementedError
+    for movie in movies:
+        if movie.movie_id == movie_id:
+            movie.name = updated_movie.name
+            movie.year = updated_movie.year
+            return UpdateMovieResponse(success=True)
+    raise HTTPException(status_code=404, detail="Movie not found")
 
 @app.delete("/movies/{movie_id}")
 async def delete_movie(movie_id: uuid.UUID) -> DeleteMovieResponse:
-    raise NotImplementedError
+    global movies 
+    initial_length = len(movies)
+    movies = [movie for movie in movies if movie.movie_id != movie_id]
+    if len(movies) < initial_length:
+        return DeleteMovieResponse(success=True)
+    else:
+        raise HTTPException(status_code=404, detail="Movie not found")
